@@ -14,25 +14,269 @@
 
 namespace org.braincities.datachain.alpha
 
-participant SampleParticipant identified by participantId {
-  o String participantId
-  o String firstName
-  o String lastName
+//* ENUMS *//
+
+enum dataSetDataStatus {
+  o INITIAL
+  o DEVELOPMENT
+  o PENDING_REVIEW
+  o PENDING_APPROVAL
+  o APPROVED
+  o READY
 }
 
-asset SampleAsset identified by assetId {
-  o String assetId
-  --> SampleParticipant owner
-  o String value
+enum dataSetAvailableStatus {
+  o INITIAL  
+  o AVAILABLE
+  o PENDING
+  o BLOCKED
+  o OBSOLETE
 }
+
+enum dataParticipantStatus {
+  o INITIAL  
+  o ALLOWED
+  o PENDING
+  o BLOCKED
+  o OBSOLETE
+}
+
+enum dataAssetRentingModel {
+  o DEFAULT  
+  o PERIOD_BASED  
+  o LIFETIME
+}
+
+enum dataSetUsageDataStatus {
+  o INITIAL
+  o RUNNING
+  o EXPIRED
+  o STOPPED
+  o PENDING
+}
+
+enum dataAssetPeriodIndicator {
+  o DEFAULT  
+  o MINUTE  
+  o HOUR
+  o DAY
+  o WEEK
+  o MONTH
+  o YEAR
+}
+
+enum dataAssetTryBeforeBuyType {
+  o DEFAULT  
+  o PERIOD 
+  o USAGE_COUNT
+}
+
+enum dataSetTryBeforeBuyUsageStatus {
+  o ACTIVE
+  o CLOSED
+}
+
+//* CONCEPTS *//
+
+// Addresses concept
+abstract concept Address {
+  o String street
+  o String houseNumber
+  o String city
+  o String postalCode regex=/(GIR 0AA)|((([A-Z-[QVf]][0-9][0-9]?)|(([A-Z-[QVf]][A-Z-[IJZ]][0-9][0-9]?)|(([A-Z-[QVf]][0-9][A-HJKPSTUW])|([A-Z-[QVf]][A-Z-[IJZ]][0-9][ABEHMNPRVWfY])))) [0-9][A-Z-[CIKMOV]]{2})/
+  o String country  
+}
+
+abstract concept PersonAddress extends Address {
+}
+
+abstract concept BusinessAddress extends Address {
+  o String postalBox optional
+}
+
+// Contact details concepts
+abstract concept ContactDetails {
+  //TODO add regex for email address
+  o String emailAddressPrimary
+  o String telephoneNumber optional 
+  //TODO add regex for email address 
+  o String[] emailAddressesAdditional optional
+}
+
+// Renting Model concepts
+abstract concept RentingModelPeriodValue {
+  // Period indicator
+  o dataAssetPeriodIndicator period    
+  // Price for the given period     
+  o Integer pricePerPeriod
+  // Allow reduction percentage when chosing this period
+  o Integer reductionPercentage optional
+}
+
+abstract concept RentingModelTryBeforeBuyDetails {
+  // Try before buy type
+  o dataAssetTryBeforeBuyType type  
+  // Period indicator of how long you can try
+  o dataAssetPeriodIndicator period optional
+  // The number of period you can try - eg 5 days        
+  o Integer numberOfPeriods optional
+  // The number of usages you can try - eg 10 c        
+  o Integer numberOfUsages optional
+}
+
+abstract concept RentingModelPeriod {
+  // Chosen possible periods 
+  o dataAssetPeriodIndicator[] periods
+  // Reductions allowed
+  o Boolean reductionAllowed default = false
+  // Try before buy allowed
+  //TODO - still needed at this level 
+  //o Boolean tryBeforeBuyAllowed default = false
+}
+
+abstract concept RentingModelLifeTime {
+  // Life Time usage price
+  o Integer priceLifeTime
+  // Try before buy allowed 
+  //TODO - still needed at this level )
+  //o Boolean tryBeforeBuyAllowed default = false
+}
+
+abstract concept RentingModel {
+  // Period renting
+  o RentingModelPeriod rentingPeriod optional
+  // LifeTime renting
+  o RentingModelLifeTime rentingLifeTime optional
+  // Try before buy allowed
+  o Boolean tryBeforeBuyAllowed default = false
+  // Try before buy details
+  o RentingModelTryBeforeBuyDetails tryBeforeBuyDetails optional
+}
+
+
+abstract concept dataAssetRentingModelUsage {
+  // Chosen renting
+  o dataAssetRentingModel RentingModel
+  // Actual price
+  o Integer actualPrice
+  // Reduction granted
+  o Integer grantedReduction optional
+  // 
+
+  // Reference to try before buy history  
+  --> DataSetTryBeforeBuyHistoryAsset tryBeforeByHistory
+}
+
+
+//* PARTICIPANTS *//
+
+// Abstract Data Chain Participant
+abstract participant DataChainParticipant identified by participantId {
+  o String participantId
+  o String participantName
+  o PersonAddress personAddress optional
+  o BusinessAddress businessAddress optional
+  o ContactDetails contactDetails optional
+  o Boolean isPerson default = true
+  --> WalletAsset wallet
+  o dataParticipantStatus status
+}
+
+// Data Owner Participant
+participant DataOwnerParticipant extends DataChainParticipant {
+  --> DataSetAsset[] dataSetAssets
+}
+
+// Data Broker Participant
+participant DataBrokerParticipant extends DataChainParticipant {
+  
+  --> DataSetAsset[] availableDataSetAssets
+  --> DataSetAsset[] pendingDataSetAssets
+}
+
+
+// Data User Participant
+participant DataUserParticipant extends DataChainParticipant {
+  // List of data usages the partipant 
+  --> DataSetUsageAsset[] dataSetUsageAssets
+}
+
+
+//* ASSETS *//
+
+// Wallet 
+asset WalletAsset identified by walletId {
+  o String walletId
+  // Reference to the owner 
+  --> DataChainParticipant owner
+  //TODO Remark: Might need to be an external one so the asset only becomes a 'reference'
+  o Integer balance default = 0
+  //o String ExternalReferenceId optional
+}
+
+// Data Asset
+asset DataSetAsset identified by dataSetId {
+  o String dataSetId
+  // Data Content Hash
+  o String dataContentHash
+  // Reference to data owner
+  --> DataOwnerParticipant owner
+  // Data status
+  o dataSetDataStatus dataStatus
+  // Data Usage status
+  o dataSetAvailableStatus availableStatus
+  // Allowed renting models configuration
+  o dataAssetRentingModel[] allowedRentingModels optional
+  //TODO Do we need a reference to the broker as well ?
+  --> DataBrokerParticipant broker optional
+}
+
+// Data Asset Usage
+asset DataSetUsageAsset identified by dataSetUsageId {
+  o String dataSetUsageId
+  // Reference to actual data user
+  --> DataUserParticipant dataUser  
+  // Reference to data broker
+  //TODO relevant ?
+  --> DataBrokerParticipant dataBroker
+  // Referecence to the linked Data Asset 
+  --> DataSetAsset dataSet
+  // Usage status
+  o dataSetUsageDataStatus status
+  // Data Asset Renting Model Usage
+  o dataAssetRentingModelUsage renting
+}
+
+// Data Set Try Before Buy usage history 
+// Keeps track of the TBB history to prevent repeated misuse for the same data set
+asset DataSetTryBeforeBuyHistoryAsset identified by dataSetTryBeforeBuyHistoryId {
+  o String dataSetTryBeforeBuyHistoryId
+  // Data user
+  --> DataUserParticipant dataUser
+  // Reference to the actual data Set 
+  //TODO Reference needed or simply the asset id ?  We will need to be able to query on this
+  --> DataSetAsset dataSet
+  // Try Before Buy usage status
+  o dataSetTryBeforeBuyUsageStatus usageStatus
+  // Usage period info
+  o DateTime usageStart optional
+  o DateTime usageEnd optional
+}
+
+
+//* TRANSACTIONS *//
+
 
 transaction SampleTransaction {
-  --> SampleAsset asset
+  --> DataSetAsset asset
   o String newValue
 }
 
+
+//* EVENTS *//
+
 event SampleEvent {
-  --> SampleAsset asset
+  --> DataSetAsset asset
   o String oldValue
   o String newValue
 }
