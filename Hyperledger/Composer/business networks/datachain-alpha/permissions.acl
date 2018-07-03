@@ -15,25 +15,26 @@
 
 rule EverybodyCanReadEverything {
     description: "Allow all participants read access to all resources"
-    participant: "org.braincities.datachain.alpha.SampleParticipant"
+    participant: "org.braincities.datachain.alpha.DataChainParticipant"
     operation: READ
     resource: "org.braincities.datachain.alpha.*"
     action: ALLOW
 }
 
+//TODO - TEST
 rule EverybodyCanSubmitTransactions {
     description: "Allow all participants to submit transactions"
-    participant: "org.braincities.datachain.alpha.SampleParticipant"
+    participant: "org.braincities.datachain.alpha.DataChainParticipant"
     operation: CREATE
-    resource: "org.braincities.datachain.alpha.SampleTransaction"
+    resource: "org.braincities.datachain.alpha.*"
     action: ALLOW
 }
 
 rule OwnerHasFullAccessToTheirAssets {
     description: "Allow all participants full access to their assets"
-    participant(p): "org.braincities.datachain.alpha.SampleParticipant"
+    participant(p): "org.braincities.datachain.alpha.DataChainParticipant"
     operation: ALL
-    resource(r): "org.braincities.datachain.alpha.SampleAsset"
+    resource(r): "org.braincities.datachain.alpha.*"
     condition: (r.owner.getIdentifier() === p.getIdentifier())
     action: ALLOW
 }

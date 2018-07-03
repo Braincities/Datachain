@@ -19,6 +19,7 @@ namespace org.braincities.datachain.alpha
 enum dataSetDataStatus {
   o INITIAL
   o DEVELOPMENT
+  o READY_FOR_REVIEW
   o PENDING_REVIEW
   o PENDING_APPROVAL
   o APPROVED
@@ -72,6 +73,7 @@ enum dataAssetTryBeforeBuyType {
 }
 
 enum dataSetTryBeforeBuyUsageStatus {
+  o INITIAL
   o ACTIVE
   o CLOSED
 }
@@ -179,7 +181,7 @@ abstract participant DataChainParticipant identified by participantId {
   o ContactDetails contactDetails optional
   o Boolean isPerson default = true
   --> WalletAsset wallet
-  o dataParticipantStatus status
+  o dataParticipantStatus status default = "INITIAL"
 }
 
 // Data Owner Participant
@@ -221,10 +223,14 @@ asset DataSetAsset identified by dataSetId {
   o String dataContentHash
   // Reference to data owner
   --> DataOwnerParticipant owner
+  // Creation Timestamp
+  o DateTime creationTS optional
+  // Last updated Timestamp
+  o DateTime lastUpdatedTS optional
   // Data status
-  o dataSetDataStatus dataStatus
+  o dataSetDataStatus dataStatus default = "INITIAL"
   // Data Usage status
-  o dataSetAvailableStatus availableStatus
+  o dataSetAvailableStatus availableStatus default = "INITIAL"
   // Allowed renting models configuration
   o dataAssetRentingModel[] allowedRentingModels optional
   //TODO Do we need a reference to the broker as well ?
@@ -241,10 +247,12 @@ asset DataSetUsageAsset identified by dataSetUsageId {
   --> DataBrokerParticipant dataBroker
   // Referecence to the linked Data Asset 
   --> DataSetAsset dataSet
+  // Creation Timestamp
+  o DateTime creationTS optional
   // Usage status
-  o dataSetUsageDataStatus status
+  o dataSetUsageDataStatus status default = "INITIAL"
   // Data Asset Renting Model Usage
-  o dataAssetRentingModelUsage renting
+  o dataAssetRentingModelUsage renting  default = "DEFAULT"
 }
 
 // Data Set Try Before Buy usage history 
@@ -257,7 +265,7 @@ asset DataSetTryBeforeBuyHistoryAsset identified by dataSetTryBeforeBuyHistoryId
   //TODO Reference needed or simply the asset id ?  We will need to be able to query on this
   --> DataSetAsset dataSet
   // Try Before Buy usage status
-  o dataSetTryBeforeBuyUsageStatus usageStatus
+  o dataSetTryBeforeBuyUsageStatus usageStatus default = "INITIAL"
   // Usage period info
   o DateTime usageStart optional
   o DateTime usageEnd optional
@@ -266,17 +274,25 @@ asset DataSetTryBeforeBuyHistoryAsset identified by dataSetTryBeforeBuyHistoryId
 
 //* TRANSACTIONS *//
 
-
-transaction SampleTransaction {
-  --> DataSetAsset asset
-  o String newValue
+// Example of assigning a Data Set Asset to a broker
+transaction AssignDataSetToBrokerTransaction {
+  --> DataSetAsset dataSet
+  --> DataBrokerParticipant broker
 }
 
+// Example of setting a 'Try Before Buy' History asset to status 'Active'
+transaction SetDataSetTryBeforeBuyUsageActiveTransaction {
+  --> DataSetTryBeforeBuyHistoryAsset dataTryBeforeBuyHistory
+}
+
+// Example of setting a 'Try Before Buy' History asset to status 'Closed'
+transaction SetDataSetTryBeforeBuyUsageClosedTransaction {
+  --> DataSetTryBeforeBuyHistoryAsset dataTryBeforeBuyHistory
+}
 
 //* EVENTS *//
 
-event SampleEvent {
-  --> DataSetAsset asset
-  o String oldValue
-  o String newValue
+event DataSetAssetBrokerAssigned {  
+  --> DataBrokerParticipant broker
+  --> DataSetAsset dataSet
 }

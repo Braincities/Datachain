@@ -14,27 +14,66 @@
 
 'use strict';
 
+// Default namespace
+const defaultNS = 'org.braincities.datachain.alpha.';
+
+//TODO Add alot more implementations for the various transactions defined in the model
+
 /**
- * Sample transaction
- * @param {org.braincities.datachain.alpha.SampleTransaction} sampleTransaction
+ * Assign a given data set to a broker
+ * @param {org.braincities.datachain.alpha.AssignDataSetToBrokerTransaction} tx
  * @transaction
  */
-async function sampleTransaction(tx) {
-    // Save the old value of the asset.
-    const oldValue = tx.asset.value;
+async function assignDataSetToBroker(tx) {
 
-    // Update the asset with the new value.
-    tx.asset.value = tx.newValue;
+    // Get the data set
+    const dataSet = tx.dataSet;
+    const broker  = tx.broker;
 
-    // Get the asset registry for the asset.
-    const assetRegistry = await getAssetRegistry('org.braincities.datachain.alpha.SampleAsset');
-    // Update the asset in the asset registry.
-    await assetRegistry.update(tx.asset);
+    //TODO Various data integrety checks ?
 
-    // Emit an event for the modified asset.
-    let event = getFactory().newEvent('org.braincities.datachain.alpha', 'SampleEvent');
-    event.asset = tx.asset;
-    event.oldValue = oldValue;
-    event.newValue = tx.newValue;
+    //TODO Check the data set data status is 'READY_FOR_REVIEW'
+    //TODO Check the data owner is not blocked
+
+    //TODO Should we do a check on the given broker ?
+    //TODO Should we do a cross-check on whether the asset is already assigned ? ( status or broker ID )
+
+
+    // Assign the broker
+    dataSet.broker = broker;
+
+    // Set the data status
+    dataSet.dataStatus = dataSetDataStatus.PENDING_REVIEW;
+
+    // Get the asset registry for the data set
+    const dataSetRegistry = await getAssetRegistry( defaultNS + 'DataSetAsset');
+
+    // Update the data set in the registry
+    await dataSetRegistry.update(dataSet);
+
+    // Does the broker currently has already pending data sets ?
+    if (broker.pendingDataSetAssets) {
+
+        // Add our new data set 
+        broker.pendingDataSetAssets.push(dataSet);
+
+    } else {
+
+        // Set the pending assets
+        broker.pendingDataSetAssets = [dataSet];
+    }
+
+    // Get the asset registry for the data set
+    const brokerRegistry = await getParticipantRegistry( defaultNS + 'DataBrokerParticipant');
+
+    // Update the broker in the registry
+    await brokerRegistry.update(broker);
+
+    // Emit an event for the assignment.
+    let event = getFactory().newEvent(defaultNS, 'DataSetAssetBrokerAssignedEvent');
+
+    event.broker = broker;
+    event.dataSet = dataSet;
+
     emit(event);
 }

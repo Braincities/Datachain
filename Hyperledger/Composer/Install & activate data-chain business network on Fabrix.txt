@@ -1,0 +1,16 @@
+Hyperledger Composer Data Chain Installation
+
+
+
+(*) Install the binary into the running Test Network 'HLFV1'
+
+$	composer network install --card PeerAdmin@hlfv1 --archiveFile datachain-alpha@0.0.1.bna
+
+
+(*) Start the network
+
+$	composer network start --networkName datachain-alpha --networkVersion 0.0.1 --networkAdmin admin --networkAdminEnrollSecret adminpw --card PeerAdmin@hlfv1 --file networkadmin.card
+
+(*) Import the network admin card into the playground via the 'import business network cards'
+
+=> The datachain-alpha business network should now be visible under the 'hlfv1' connection ( see image )
